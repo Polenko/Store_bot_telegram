@@ -864,7 +864,6 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
         @dp.callback_query_handler(lambda c: c.data == 'confirm_restart')
         async def restart_bot(callback_query: types.CallbackQuery):
             await callback_query.answer("Перезапускаю бота...\nОжидайте минуточку...", show_alert=True)
-
             await dp.storage.close()
             await dp.storage.wait_closed()
             subprocess.run("python main.py", shell=True)
@@ -920,10 +919,10 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
         async def admins_keyboard(callback_query: types.CallbackQuery, state: FSMContext):
             text = "Хотите добавить каталог или товар?"
             keyboard = InlineKeyboardMarkup(row_width=2)
-            catalog = InlineKeyboardButton("🌚 Добавить каталог", callback_data="addcategory_")
-            delcatalog = InlineKeyboardButton("🌝 Удалить каталог", callback_data="deletecategory_")
-            addproduct = InlineKeyboardButton("👉 Добавить товар", callback_data="addproduct_")
-            delproduct = InlineKeyboardButton("👈 Удалить товар", callback_data="deleteproduct_")
+            catalog = InlineKeyboardButton("Добавить каталог🌚", callback_data="addcategory_")
+            delcatalog = InlineKeyboardButton("🌝Удалить каталог", callback_data="deletecategory_")
+            addproduct = InlineKeyboardButton("Добавить товар👉", callback_data="addproduct_")
+            delproduct = InlineKeyboardButton("👈Удалить товар", callback_data="deleteproduct_")
             editor = InlineKeyboardButton("🤝 Редактировать товары", callback_data='editproduct_')
             keyboard.add(catalog, delcatalog)
             keyboard.add(addproduct, delproduct)
@@ -1111,11 +1110,11 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
                     user_id = user['user_id']
                     user_name = user.get('name', 'Нет имени')
                     user_number = user.get('number', 'Нет номера')
-                    button_text = f"ID: {user_id}, Имя: {user_name}, Номер: {user_number}"
+                    button_text = f"ID:{user_id},🎫 {user_name},🗿 {user_number}"
                     button = InlineKeyboardButton(button_text, callback_data=f"select_user_{user_id}")
                     keyboard.add(button)
                 keyboard.add(InlineKeyboardButton("🔙 Отмена", callback_data='admins'))
-                await bot.edit_message_text("Выберите пользователя, которого вы хотите добавить в администраторы:",
+                await bot.edit_message_text("🎖 Выберите пользователя, которого вы хотите добавить в администраторы:",
                                             callback_query.from_user.id, callback_query.message.message_id,
                                             reply_markup=keyboard)
                 await UserForm.add_admin.set()
@@ -1173,7 +1172,7 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
                     user_id = user['user_id']
                     user_name = user.get('name', 'Нет имени')
                     user_number = user.get('number', 'Нет номера')
-                    button_text = f"ID: {user_id}, Имя: {user_name}, Номер: {user_number}"
+                    button_text = f"ID:{user_id},🎫{user_name},🗿{user_number}"
                     button = InlineKeyboardButton(button_text, callback_data=f"select_user_{user_id}")
                     keyboard.add(button)
                 keyboard.add(InlineKeyboardButton("🔙 Отмена", callback_data='admins'))
@@ -1229,7 +1228,7 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
 
                 await state.finish()
 
-        # Убрать админа
+        # Удалить админа
         @dp.callback_query_handler(lambda callback_query: callback_query.data == "listadmins_")
         async def list_admins(callback_query: types.CallbackQuery):
             admins_info = await get_admins_from_db()
@@ -1246,7 +1245,7 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
                     user_id = admin['user_id']
                     user_name = admin.get('user_name', 'Нет имени')
                     user_number = admin.get('user_number', 'Нет номера')
-                    button_text = f"👥Имя: {user_name}\n📞Номер: {user_number}"
+                    button_text = f"👥:{user_name}\n📞:{user_number}"
                     button = InlineKeyboardButton(button_text, callback_data=f"delete_admin_{user_id}")
                     keyboard.add(button)
                 keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data='admins'))
@@ -1311,10 +1310,10 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
                     user_id = user['user_id']
                     user_name = user.get('user_name', 'Нет имени')
                     user_number = user.get('user_number', 'Нет номера')
-                    button_text = f"👤 ID: {user_id}\n👥 Имя: {user_name}\n📞 Номер: {user_number}"
+                    button_text = f"👤{user_id}\n👥{user_name}\n📞{user_number}"
                     button = InlineKeyboardButton(button_text, callback_data=f"delete_blacklist_{user_id}")
                     keyboard.add(button)
-                keyboard.add(InlineKeyboardButton("🔙 Отмена", callback_data='admins'))
+                keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data='admins'))
                 await bot.edit_message_text(
                     "Список пользователей в чс:",
                     callback_query.from_user.id, callback_query.message.message_id,
@@ -1344,7 +1343,7 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
 
             if black_list_info:
                 keyboard.add(InlineKeyboardButton('🔁 Еще кого то убрать❓', callback_data="blacklist_"))
-                keyboard.add(InlineKeyboardButton("🔙 Отмена", callback_data='admins'))
+                keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data='admins'))
                 await remove_user_from_black_list(user_id)
                 await bot.edit_message_text(
                     f"Пользователь: {user_name}, {user_number}\nID: {user_id} убран из чс.",
@@ -1353,7 +1352,7 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
             else:
                 keyboard = InlineKeyboardMarkup()
                 keyboard.add(InlineKeyboardButton('🔁 Еще кого то убрать❓', callback_data="blacklist_"))
-                keyboard.add(InlineKeyboardButton("🔙 Отмена", callback_data='admins'))
+                keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data='admins'))
                 await bot.edit_message_text(
                     f"Пользователь: {user_name}, {user_number}\nID: {user_id} не найден.",
                     callback_query.from_user.id, callback_query.message.message_id,
