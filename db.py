@@ -512,3 +512,26 @@ async def update_user_cart(user_id, cart):
     user = await get_user(user_id)
     user['cart'] = cart
     await update_user(user_id, user)
+
+async def get_user_info(user_id):
+    user = await get_user(user_id)
+    if user:
+        name = user.get('name', 'Нет имени')
+        number = user.get('number', 'Нет номера')
+        delivery_type = user.get('delivery_type', 'Не указан')
+        return f"Имя: {name}\nНомер телефона: {number}\nТип доставки: {delivery_type}"
+    else:
+        return "Пользователь не найден"
+
+
+async def get_user_orders(user_id):
+    orders = await get_order_history(user_id)
+    if orders:
+        orders_info = ""
+        for order in orders:
+            order_time = order.get('order_time', 'Нет данных')
+            total_price = order.get('total_price', 'Нет данных')
+            orders_info += f"Дата заказа: {order_time}, Сумма заказа: {total_price}\n"
+        return orders_info
+    else:
+        return "У пользователя нет заказов"

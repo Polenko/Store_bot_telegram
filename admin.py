@@ -19,10 +19,11 @@ from db import add_category, get_users_from_db, bot, get_categories_from_db, \
     add_user_to_black_list, get_user_to_black_list, remove_user_from_black_list, get_blacklist_info, get_daily_stats, \
     add_users, get_stats_for_period, get_messanger_from_db, addmessanger, remove_contact_from_db, \
     add_pickup_address, get_pickup_address, \
-    update_pickup_address, get_product_quantity, get_product_by_name, get_catalog_by_name, update_product_in_catalog
+    update_pickup_address, get_product_quantity, get_product_by_name, get_catalog_by_name, update_product_in_catalog, \
+    get_user_info, get_user_orders
 from states import ProductForm, NewCategory, UserForm, AddPerson, UpdateUserData, DeleteProduct, SetDeliveryState, \
     Broadcast, AddNewPerson, AddContactState, PickupAddressState, UpdateAddressState, \
-    DeliveryState, EditProduct
+    DeliveryState, EditProduct, UserPage
 
 user_carts = {}
 catalog_name_data = {}
@@ -610,6 +611,7 @@ async def show_orders(callback_query: types.CallbackQuery):
                                reply_markup=keyboard)
 
 
+
 @dp.callback_query_handler(text="show_profile", state="*")
 async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
     user_id = callback_query.from_user.id
@@ -792,7 +794,7 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
 
         @dp.callback_query_handler(lambda c: c.data == "updateadress")
         async def update_address(callback_query: CallbackQuery):
-            await bot.send_message(callback_query.from_user.id, "Введите новый адрес для обновления:")
+            await bot.send_message(callback_query.from_user.id, "🐌 Введите новый адрес для обновления:")
             await UpdateAddressState.waiting_for_new_address.set()
 
         @dp.message_handler(state=UpdateAddressState.waiting_for_new_address)
@@ -800,7 +802,7 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
             new_address = message.text
             await update_pickup_address(new_address)
             await state.finish()
-            await bot.send_message(message.from_user.id, f"Адрес самовывоза успешно обновлен: {new_address}",
+            await bot.send_message(message.from_user.id, f"🧳 Адрес самовывоза успешно обновлен: {new_address}",
                                    reply_markup=await get_admin_inline_keyboard())
 
         @dp.callback_query_handler(lambda c: c.data == "send_message")
@@ -816,12 +818,12 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
         @dp.message_handler(state=Broadcast.waiting_text)
         async def set_broadcast_text(message: types.Message, state: FSMContext):
             confirm_keyboard = InlineKeyboardMarkup(row_width=2)
-            confirm_button = InlineKeyboardButton(text="Да", callback_data="confirm_yes")
-            cancel_button = InlineKeyboardButton(text="Отмена", callback_data="admins")
+            confirm_button = InlineKeyboardButton(text="🤷‍♂️ Да", callback_data="confirm_yes")
+            cancel_button = InlineKeyboardButton(text="🏃‍♂️ Отмена", callback_data="admins")
             confirm_keyboard.add(confirm_button, cancel_button)
             await state.update_data(text=message.text)
 
-            await message.answer("Отправить рассылку?", reply_markup=confirm_keyboard)
+            await message.answer("🕶 Отправить рассылку?", reply_markup=confirm_keyboard)
 
         @dp.callback_query_handler(text="confirm_no", state=Broadcast.waiting_text)
         async def cancel_broadcast(callback: CallbackQuery, state: FSMContext):
@@ -844,7 +846,7 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
             await bot.send_message(callback.from_user.id, "Главное меню", reply_markup=menu_keyboard)
 
             await callback.message.answer(
-                f"Рассылка выполнена!\nУспешно отправлено {successful_count} сообщений.",
+                f"🕶 Рассылка выполнена!\nУспешно отправлено {successful_count} сообщений.",
                 reply_markup=await get_admin_inline_keyboard()
             )
             await state.finish()
@@ -854,16 +856,16 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
         async def confirm_restart(callback_query: types.CallbackQuery):
             keyboard = InlineKeyboardMarkup()
             confirm_button = InlineKeyboardButton("🚸 Да, перезапустить", callback_data='confirm_restart')
-            cancel_button = InlineKeyboardButton("◀️ Отмена", callback_data='admins')
+            cancel_button = InlineKeyboardButton("☄️ Отмена", callback_data='admins')
             keyboard.add(confirm_button, cancel_button)
             await bot.edit_message_text(
-                "Вы уверены, что хотите перезапустить бота?",
+                "🤦‍♀️ Вы уверены, что хотите перезапустить бота?",
                 callback_query.from_user.id, callback_query.message.message_id,
                 reply_markup=keyboard)
 
         @dp.callback_query_handler(lambda c: c.data == 'confirm_restart')
         async def restart_bot(callback_query: types.CallbackQuery):
-            await callback_query.answer("Перезапускаю бота...\nОжидайте минуточку...", show_alert=True)
+            await callback_query.answer("💆‍♀️ Перезапускаю бота...\nОжидайте минуточку...", show_alert=True)
             await dp.storage.close()
             await dp.storage.wait_closed()
             subprocess.run("python main.py", shell=True)
@@ -871,7 +873,7 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
         @dp.callback_query_handler(lambda c: c.data == 'cancel_restart')
         async def cancel_restart(callback_query: types.CallbackQuery):
             await bot.edit_message_text(
-                "Перезапуск отменен.",
+                "🕺 Перезапуск отменен.",
                 callback_query.from_user.id, callback_query.message.message_id,
                 reply_markup=await get_admin_inline_keyboard())
 
@@ -902,11 +904,13 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
             adress = InlineKeyboardButton("🛬 Адрес", callback_data="get_pickup_address")
             stats = InlineKeyboardButton('📈 Статистика', callback_data="stats")
             send_message_to_all = InlineKeyboardButton("📢 Рассылка", callback_data="send_message")
+            # user_info_page = InlineKeyboardButton('🪪 Люди', callback_data="select_user")
             restart_bot = InlineKeyboardButton('🫡 Хотите перезагрузить бота?', callback_data="restart_bot")
             keyboard.add(addmin, delmin)
             keyboard.add(add_black_list, del_black_list)
             keyboard.add(adress, contactadd)
             keyboard.add(send_message_to_all, stats)
+            # keyboard.add(user_info_page)
             keyboard.add(restart_bot)
             keyboard.add(InlineKeyboardButton('Назад', callback_data="show_profile"))
             await bot.edit_message_text(text,
@@ -1753,6 +1757,54 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
                 f"Статистика за месяц:\n{stats}",
                 callback_query.from_user.id, callback_query.message.message_id,
                 reply_markup=keyboard)
+
+        # @dp.callback_query_handler(lambda c: c.data == 'select_user')
+        # async def select_user(callback_query: types.CallbackQuery):
+        #
+        #     users = await get_users_from_db()
+        #
+        #     keyboard = types.InlineKeyboardMarkup()
+        #     for user in users:
+        #         user_id = user['user_id']
+        #         user_name = user.get('name', 'Без имени')
+        #         button_text = f"ID: {user_id}, Name: {user_name}"
+        #         keyboard.insert(types.InlineKeyboardButton(text=button_text, callback_data=f"user_selected_{user_id}"))
+        #
+        #     await callback_query.message.answer("Select user", reply_markup=keyboard)
+        #
+        # @dp.callback_query_handler(lambda c: c.data.startswith('user_selected_'))
+        # async def user_selected(callback_query: types.CallbackQuery, state: FSMContext):
+        #
+        #     user_id = int(callback_query.data.split('_')[2])
+        #     user = await get_user(user_id)
+        #
+        #     await state.update_data(selected_user=user)
+        #
+        #
+        # @dp.callback_query_handler(lambda c: c.data.startswith('user_page_'))
+        # async def show_user_page(callback_query: types.CallbackQuery):
+        #     user_id = int(callback_query.data.split('_')[2])
+        #
+        #     user = await get_user(user_id)
+        #     user_info = await get_user_info(user_id)
+        #
+        #     await callback_query.message.answer(text=user_info)
+        #
+        #     keyboard = types.InlineKeyboardMarkup()
+        #     keyboard.add(
+        #         types.InlineKeyboardButton(text="Посмотреть заказы", callback_data=f"orders:{user_id}")
+        #     )
+        #     keyboard.add(types.InlineKeyboardButton(text="Назад", callback_data="select_user"))
+        #
+        #     await callback_query.message.answer("Действия:", reply_markup=keyboard)
+        #
+        # @dp.callback_query_handler(lambda c: c.data.startswith('orders:'))
+        # async def show_user_orders(callback_query: types.CallbackQuery):
+        #     user_id = callback_query.data.split(':')[1]
+        #
+        #     orders = await get_user_orders(user_id)
+        #
+        #     await callback_query.message.answer(text=orders)
 
 
 

@@ -133,3 +133,6 @@ class ProductMenu(StatesGroup):
 
 class CheckoutMenu(StatesGroup):
     checkout = State()
+
+class UserPage(StatesGroup):
+    waiting_for_user_id = State()
