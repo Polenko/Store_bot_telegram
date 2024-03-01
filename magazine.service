@@ -1,0 +1,15 @@
+[Unit]
+Description=Magazine
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/mybots/magazine
+ExecStart=/mybots/magazine/venv/bin/python3.11 /mybots/magazine/main.py
+RestartSec=10
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

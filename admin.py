@@ -49,6 +49,7 @@ menu_keyboard = InlineKeyboardMarkup(row_width=1)
 menu_keyboard.add(
     InlineKeyboardButton(text="🗃️ Каталог", callback_data="show_catalog"),
     InlineKeyboardButton(text="🛒 Корзина", callback_data="show_cart"),
+    InlineKeyboardButton(text="📖 Заказы", callback_data="show_orders"),
     InlineKeyboardButton(text="💼 Профиль", callback_data="show_profile"),
     InlineKeyboardButton(text="❗ FAQ", callback_data="show_help")
 )
@@ -59,7 +60,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     await state.finish()
     await add_users(user_id)
-    await bot.send_message(message.chat.id, "Добро пожаловать ❗\nОзнакомьтесь с каталогом нашего магазина⤵",
+    await bot.send_message(message.chat.id, "Ознакомьтесь с каталогом нашего магазина⤵",
                            reply_markup=menu_keyboard)
 
 
@@ -1825,7 +1826,6 @@ async def show_profile(callback_query: types.CallbackQuery, state=FSMContext):
             personal_change.add(
                 InlineKeyboardButton("☎️ Изменить номер ⬅", callback_data="change_number_"),
             )
-            personal_change.add(InlineKeyboardButton(text="📖 Заказы", callback_data="show_orders"))
             personal_change.add(InlineKeyboardButton("🔙 Назад", callback_data='назад'))
 
             try:
