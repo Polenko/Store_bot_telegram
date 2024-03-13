@@ -20,6 +20,11 @@ class EditProduct(StatesGroup):
     select_attribute = State()
 
 
+class EditCatalogName(StatesGroup):
+    enter_new_name = State()
+    waiting_for_catalog_selection = State()
+
+
 class AddMessengerState(StatesGroup):
     waiting_for_contact = State()
     waiting_for_messenger_name = State()
@@ -105,34 +110,3 @@ class SetDeliveryState(StatesGroup):
     waiting_for_delivery = State()
     waiting_for_address = State()
     waiting_for_contact_data = State()
-
-
-class MenuState(StatesGroup):
-    catalog = State()
-    subcategory = State()
-    product = State()
-    checkout = State()
-    main_menu = State()
-
-
-class MainMenu(StatesGroup):
-    main_menu = State()
-
-
-class CatalogMenu(StatesGroup):
-    catalog = State()
-
-
-class SubcategoryMenu(StatesGroup):
-    subcategory = State()
-
-
-class ProductMenu(StatesGroup):
-    product = State()
-
-
-class CheckoutMenu(StatesGroup):
-    checkout = State()
-
-class UserPage(StatesGroup):
-    waiting_for_user_id = State()

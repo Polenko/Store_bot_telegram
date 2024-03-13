@@ -1,13 +1,13 @@
 [Unit]
-Description=Magazine
+Description="Название"
 After=syslog.target
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/mybots/magazine
-ExecStart=/mybots/magazine/venv/bin/python3.11 /mybots/magazine/main.py
+WorkingDirectory='Путь до папки с ботом'
+ExecStart='Путь до python3.11' "Путь до main.py"
 RestartSec=10
 Restart=always
 

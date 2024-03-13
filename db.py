@@ -1,11 +1,13 @@
-from pymongo import MongoClient
-from config import MONGODB_URL, MONGODB_NAME, BOT_TOKEN
+from datetime import datetime, timedelta
+
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
-from gridfs import GridFS
 from bson import ObjectId
-from datetime import datetime, timedelta
+from gridfs import GridFS
+from pymongo import MongoClient
+
+from config import MONGODB_URL, MONGODB_NAME, BOT_TOKEN
 
 MONGODB_URI = MONGODB_URL
 DB_NAME = MONGODB_NAME
@@ -26,25 +28,48 @@ users_collection = db["users"]
 contacts_collection = db["contacts"]
 pickup_collection = db['address']
 
-order_time = datetime(2023, 11, 14, 2, 43, 35, 493799)
-formatted_time = order_time.strftime("%Y-%m-%d %H:%M:%S")
-
 
 async def update_user(user_id, user_data):
     person_collection.replace_one({"user_id": user_id}, user_data)
 
 
-async def get_product_quantity(product_name, catalog_name):
-    catalog = await get_catalog_by_name(catalog_name)
-
+async def get_product_quantity(product_id, catalog_id):
+    catalog = await get_catalog_by_id(catalog_id)
     if catalog:
         products = catalog.get('products', [])
         for product in products:
-            if product.get('product_name') == product_name:
+            if product.get('_id') == product_id:
                 quantity = product.get('quantity', 0)
-                return quantity
+                return int(quantity)
 
     return 0
+
+
+async def get_catalog_by_id(catalog_id):
+    try:
+        catalog = catalog_collection.find_one({"_id": ObjectId(catalog_id)})
+        if catalog:
+            return catalog
+        else:
+            return None
+    except Exception as e:
+        print(f"Ошибка при получении каталога: {e}")
+        return None
+
+
+async def get_product_data(product_id, catalog_id):
+    catalog = await get_catalog_by_id(catalog_id)
+    if catalog:
+        products = catalog.get("products", [])
+        for product in products:
+            if str(product.get("_id")) == str(product_id):
+                return {
+                    'product_name': product.get('product_name'),
+                    'product_price': product.get('product_price'),
+                    'quantity': product.get('quantity')
+                }
+
+    return None
 
 
 async def get_product_details_url(product_name, catalog_name):
@@ -130,6 +155,11 @@ async def save_image(photo):
     return str(image_id)
 
 
+async def remove_category_from_db(category_id):
+    result = catalog_collection.delete_one({"_id": ObjectId(category_id)})
+    return result.deleted_count > 0
+
+
 async def get_photo_file_by_id(image_id):
     image = fs.get(ObjectId(image_id))
     if image:
@@ -150,11 +180,24 @@ async def get_blacklist_info(user_id):
     return user
 
 
-async def get_products_in_category(category_name):
-    catalog = await get_catalog_by_name(category_name)
+async def get_products_in_category(category_id):
+    catalog = await get_catalog_by_id(category_id)
     if catalog:
         return catalog.get('products', [])
     return []
+
+
+async def update_catalog_name(catalog_id, new_name):
+    try:
+        catalog_id = ObjectId(catalog_id)  # Преобразуем строку в ObjectId
+        update_query = {"_id": catalog_id}
+        update_operation = {"$set": {"name": new_name}}
+
+        result = catalog_collection.update_one(update_query, update_operation)
+        if result.modified_count == 0:
+            raise ValueError("Каталог не найден или название не было изменено")
+    except Exception as e:
+        raise e
 
 
 async def remove_admin_from_db(user_id):
@@ -165,24 +208,20 @@ async def remove_user_from_black_list(user_id):
     black_list_collection.delete_one({"user_id": user_id})
 
 
-async def remove_category_from_db(category_name):
-    result = catalog_collection.delete_one({"name": category_name})
-    return result.deleted_count > 0
-
-
-async def save_order(user_id, delivery_type, total_price, user_cart, catalog_name, delivery_address):
+async def save_order(user_id, delivery_type, total_price, user_cart, catalog_id, delivery_address):
+    current_time = datetime.now()
     order_data = {
         'user_id': user_id,
         'delivery_type': delivery_type,
         'total_price': total_price,
-        'order_time': formatted_time,
-        'products': user_cart,
-        'catalog_name': catalog_name,
+        'order_time': current_time,
+        'products': list(user_cart.values()),
+        'catalog_id': catalog_id,
         'delivery_address': delivery_address
     }
 
-    for product_name, product_data in user_cart.items():
-        await decrease_product_quantity(product_name, product_data['quantity'], catalog_name)
+    for product_id, product_data in user_cart.items():
+        await decrease_product_quantity(product_id, product_data['quantity'], catalog_id)
 
     result = orders_collection.insert_one(order_data)
     order_id = result.inserted_id
@@ -190,19 +229,18 @@ async def save_order(user_id, delivery_type, total_price, user_cart, catalog_nam
     return order_id
 
 
-async def decrease_product_quantity(product_name, quantity_to_decrease, catalog_name):
-    catalog = await get_catalog_by_name(catalog_name)
-
+async def decrease_product_quantity(product_id, quantity_to_decrease, catalog_id):
+    catalog = await get_catalog_by_id(catalog_id)
     if catalog:
         products = catalog.get('products', [])
         for product in products:
-            if product.get('product_name') == product_name:
+            if product.get('_id') == product_id:
                 current_quantity = product.get('quantity', 0)
 
                 if current_quantity >= quantity_to_decrease:
                     product['quantity'] = current_quantity - quantity_to_decrease
 
-                    await update_product_in_catalog(catalog_name, product_name, product)
+                    await update_product_in_catalog(catalog_id, product_id, product)
                 else:
                     raise ValueError("Недостаточно товаров на складе")
                 break
@@ -210,31 +248,65 @@ async def decrease_product_quantity(product_name, quantity_to_decrease, catalog_
         raise ValueError("Категория не найдена")
 
 
-async def update_product_in_catalog(catalog_name, product_name, update_data):
-    catalog = await get_catalog_by_name(catalog_name)
-    if catalog:
+async def update_product_attribute(catalog_id, product_id, selected_attribute, new_data):
+    try:
+        catalog = await get_catalog_by_id(str(catalog_id))
+        if not catalog:
+            raise ValueError("Категория не найдена")
+
         products = catalog.get('products', [])
-        for product in products:
-            if product.get('product_name') == product_name:
-                product.update(update_data)
+        product_index = None
+        for i, product in enumerate(products):
+            if product['_id'] == ObjectId(product_id):
+                product_index = i
+                break
 
-        catalog_collection.update_one({"name": catalog_name}, {"$set": {"products": products}})
-    else:
-        raise ValueError("Категория не найдена")
+        if product_index is None:
+            raise ValueError("Товар не найден")
+
+        if selected_attribute == 'product_price':
+            products[product_index]['product_price'] = float(new_data)
+        elif selected_attribute == 'name_description':
+            products[product_index]['name_description'] = new_data
+        elif selected_attribute == 'product_name':
+            products[product_index]['product_name'] = new_data
+        elif selected_attribute == 'quantity':
+            products[product_index]['quantity'] = int(new_data)
+        else:
+            raise ValueError("Неизвестный атрибут товара.")
+
+        update_query = {"_id": ObjectId(catalog_id)}
+        update_operation = {"$set": {"products": products}}
+
+        catalog_collection.update_one(update_query, update_operation)
+    except Exception as e:
+        print(f"Ошибка при обновлении информации о товаре: {e}")
 
 
-async def remove_product_from_db(category_name, product_name):
-    catalog = await get_catalog_by_name(category_name)
+async def update_product_in_catalog(catalog_id, product_id, update_data):
+    try:
+        update_query = {"_id": ObjectId(catalog_id), "products._id": ObjectId(product_id)}
+        update_operation = {"$set": {f"products.$.{key}": value for key, value in update_data.items()}}
 
+        result = catalog_collection.update_one(update_query, update_operation)
+
+        if result.modified_count == 0:
+            raise ValueError("Товар не найден")
+    except Exception as e:
+        print(f"Ошибка при обновлении информации о товаре: {e}")
+
+
+async def remove_product_from_db_by_id(catalog_id, product_id):
+    catalog = await get_catalog_by_id(catalog_id)
     if not catalog:
         return False
 
     products = catalog.get('products', [])
-    new_products = [product for product in products if product.get('product_name') != product_name]
+    new_products = [product for product in products if product.get('_id') != product_id]
 
     catalog['products'] = new_products
 
-    result = catalog_collection.replace_one({"_id": catalog["_id"]}, catalog)
+    result = catalog_collection.update_one({"_id": catalog["_id"]}, {"$set": {"products": new_products}})
 
     return result.modified_count > 0
 
@@ -406,12 +478,13 @@ async def add_category(catalog_name):
             'name': catalog_name,
             'products': []
         }
-        catalog_collection.insert_one(catalog)
+        result = catalog_collection.insert_one(catalog)
+    return result.inserted_id
 
 
 async def get_categories_from_db():
     categories = catalog_collection.find()
-    result = [dict(category) for category in categories]
+    result = [category for category in categories]
     return result
 
 
@@ -422,6 +495,15 @@ async def get_categories():
 
 async def get_products(category_name):
     category = catalog_collection.find_one({"name": category_name})
+    if category:
+        products = category.get("products", [])
+    else:
+        products = []
+    return products
+
+
+async def get_products_in_category_by_id(category_id):
+    category = catalog_collection.find_one({"_id": category_id})
     if category:
         products = category.get("products", [])
     else:
@@ -457,6 +539,20 @@ async def get_product_by_name(product_name):
                     return product
 
     return None
+
+
+async def get_product_by_id(catalog_id, product_id):
+    try:
+        catalog = catalog_collection.find_one({"_id": catalog_id})
+        if catalog and 'products' in catalog:
+            products = catalog['products']
+            for product in products:
+                if str(product.get('_id')) == str(product_id):
+                    return product
+        return None
+    except Exception as e:
+        print(f"Ошибка при поиске товара по _id: {e}")
+        return None
 
 
 async def get_catalog_by_name(catalog_name):
@@ -512,6 +608,7 @@ async def update_user_cart(user_id, cart):
     user = await get_user(user_id)
     user['cart'] = cart
     await update_user(user_id, user)
+
 
 async def get_user_info(user_id):
     user = await get_user(user_id)
