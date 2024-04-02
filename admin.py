@@ -89,9 +89,9 @@ async def get_menu_keyboard(user_id):
     menu_keyboard.add(catalog)
     menu_keyboard.add(cart)
     menu_keyboard.add(orders, profile)
-    # menu_keyboard.add(InlineKeyboardButton(text="Админ панель 🤴", callback_data="admin_panel"))
-    if user_id in admin_user_ids:
-        menu_keyboard.add(InlineKeyboardButton(text="Админ панель 🤴", callback_data="admin_panel"))
+    menu_keyboard.add(InlineKeyboardButton(text="Панель управления 🤴", callback_data="admin_panel"))
+    # if user_id in admin_user_ids:
+    #     menu_keyboard.add(InlineKeyboardButton(text="Панель управления🤴", callback_data="admin_panel"))
     menu_keyboard.add(help)
     return menu_keyboard
 
@@ -126,15 +126,15 @@ async def show_contacts(callback_query: CallbackQuery):
 @dp.callback_query_handler(text="show_help")
 async def show_help(callback: types.CallbackQuery):
     keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton(text="✉ Контакты", callback_data="show_contacts"), )
+    keyboard.add(InlineKeyboardButton(text="Контакты 📧", callback_data="show_contacts"))
     keyboard.add(InlineKeyboardButton('Назад ↩️', callback_data="show_menu"))
     chat_id = callback.message.chat.id
     text = "Для работы с ботом вам доступны следующие команды:\n\n"
-    text += "🗃️ Каталог - просмотреть каталог товаров и добавить их в корзину\n"
-    text += "🛒 Корзина - посмотреть выбранные товары и оформить заказ\n"
-    text += "📖 Заказы - посмотреть ваши прошлые заказы\n"
-    text += "💼 Профиль - Посмотреть контактные данные\n"
-    text += "✉ Контакты - связь с нами\n"
+    text += "Каталог 🗃️ - просмотреть каталог товаров и добавить их в корзину\n"
+    text += "Корзина 🛒 - посмотреть выбранные товары и оформить заказ\n"
+    text += "Заказы 📖 - посмотреть ваши прошлые заказы\n"
+    text += "Профиль 💼 - Посмотреть контактные данные\n"
+    text += "Контакты 📧 - связь с нами\n"
     await bot.edit_message_text(text, chat_id, callback.message.message_id, reply_markup=keyboard)
 
 
@@ -186,7 +186,7 @@ async def show_category_products(callback_query: types.CallbackQuery):
                     f"{product_name}\n♾️♾️♾️♾️♾️♾️♾️♾️\n"
                     f"{name_description}\n"
                     f"Цена: {product['product_price']} сом\n"
-                    f"Количество: {product['quantity']} штук\n♾️♾️♾️♾️♾️♾️♾️♾️")
+                    f"Количество: {product['quantity']} шт\n♾️♾️♾️♾️♾️♾️♾️♾️")
                 resized_image_path = resize_image(image_path)
                 with open(resized_image_path, 'rb') as photo_file:
                     try:
@@ -215,7 +215,7 @@ async def show_cart_contents(user_id):
             quantity = product_data['quantity']
             price = product_data['price']
             total_price = quantity * price
-            await bot.send_message(user_id, f"Товар: {product_name}\nКоличество: {quantity}\nЦена: {total_price} руб")
+            await bot.send_message(user_id, f"Товар: {product_name}\nКоличество: {quantity}\nЦена: {total_price} сом")
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith(('addtocart_', 'addname_', 'remove_')))
@@ -350,10 +350,10 @@ async def show_cart(callback_query: types.CallbackQuery):
         quantity = product_data['quantity']
         price = product_data['price']
         total_price += quantity * price
-        items.append(f"♾️♾️♾️♾️♾️\n{product_name}\nКоличество ➖ {quantity} шт.\nПо цене ➖ {price} руб")
+        items.append(f"♾️♾️♾️♾️♾️\n{product_name}\nКоличество ➖ {quantity} шт.\nПо цене ➖ {price} сом")
 
 
-    text = f"Содержимое корзины:\n\n" + "\n".join(items) + f"\n\n♾️♾️♾️♾️♾️\nВсего на сумму: {total_price} руб"
+    text = f"Содержимое корзины:\n\n" + "\n".join(items) + f"\n\n♾️♾️♾️♾️♾️\nВсего на сумму: {total_price} сом"
 
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("Оформить заказ 💸", callback_data="checkout"))
@@ -412,9 +412,11 @@ async def checkout(callback_query: types.CallbackQuery, state: FSMContext):
                                         callback_query.message.message_id,
                                         reply_markup=keyboard)
     else:
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(InlineKeyboardButton(text="Контакты 📧", callback_data="show_contacts"))
         await bot.edit_message_text("Вы в черном списке, свяжитесь с администрацией", user_id,
                                     callback_query.message.message_id,
-                                    reply_markup=menu_keyboard)
+                                    reply_markup=keyboard)
 
     await state.finish()
 
@@ -623,9 +625,9 @@ async def send_order_to_admins(user_id, user_cart, total_price, delivery_type, o
     text += "Заказанные товары:\n"
 
     for product_id, product_data in user_cart.items():
-        text += f"➖ {product_data['product_name']}: {product_data['quantity']} шт. | {product_data['price'] * product_data['quantity']} руб\n"
+        text += f"➖ {product_data['product_name']}: {product_data['quantity']} шт. | {product_data['price'] * product_data['quantity']} сом\n"
 
-    text += f"Итого: {total_price} руб"
+    text += f"Итого: {total_price} сом"
 
     await bot.send_message(admin_chat_id, text)
 
@@ -662,7 +664,7 @@ async def show_orders(callback_query: types.CallbackQuery):
                 product_name = product['product_name']
                 quantity = product['quantity']
                 price = product['price']
-                order_info += f"➡️ {product_name}\n➡️ Количество: {quantity} шт. По цене: {price} руб\n"
+                order_info += f"➡️ {product_name}\n➡️ Количество: {quantity} шт. По цене: {price} сом\n"
             count_orders += float(order['total_price'])
             order_info += f"Итоговая сумма: {float(order['total_price'])}\n"
         order_info += '➖➖➖➖➖➖➖\n'
@@ -919,7 +921,7 @@ async def show_admin_panel(callback_query: types.CallbackQuery, state=FSMContext
         keyboard.add(InlineKeyboardButton("Назад ↩️", callback_data="admins"))
 
         await bot.edit_message_text(
-            "👥 Контакты:",
+            "Контакты 📧",
             callback_query.from_user.id,
             callback_query.message.message_id,
             reply_markup=keyboard
@@ -1152,7 +1154,7 @@ async def show_admin_panel(callback_query: types.CallbackQuery, state=FSMContext
         delmin = InlineKeyboardButton('☠️ Удалить админа', callback_data="listadmins_")
         add_black_list = InlineKeyboardButton("🤡 Добавить в чс", callback_data="addblacklist_")
         del_black_list = InlineKeyboardButton("🤐 Убрать из чс", callback_data="blacklist_")
-        contactadd = InlineKeyboardButton("📞 Контакты", callback_data="contacts")
+        contactadd = InlineKeyboardButton("Контакты 📧", callback_data="contacts")
         adress = InlineKeyboardButton("🛬 Адрес", callback_data="get_pickup_address")
         stats = InlineKeyboardButton('📈 Статистика', callback_data="stats")
         send_message_to_all = InlineKeyboardButton("📢 Рассылка", callback_data="send_message")
@@ -1777,11 +1779,6 @@ async def show_admin_panel(callback_query: types.CallbackQuery, state=FSMContext
                 reply_markup=keyboard
             )
 
-    # def format_product_name(product_name):
-    #     formatted_words = [word.capitalize() for word in product_name.split()]
-    #     formatted_product_name = ' '.join(formatted_words)
-    #     clean_product_name = re.sub(r'[^a-zA-Zа-яА-Я0-9\s]', '', formatted_product_name)
-    #     return clean_product_name
 
     @dp.callback_query_handler(lambda c: c.data.startswith('addproduct_'), state='*')
     async def add_product(callback_query: types.CallbackQuery):
@@ -1807,10 +1804,10 @@ async def show_admin_panel(callback_query: types.CallbackQuery, state=FSMContext
             "Введите название товара 🔤",
             reply_markup=keyboard)
 
-    @dp.message_handler(lambda message: len(message.text) >= 40, state=ProductForm.add_name)
+    @dp.message_handler(lambda message: len(message.text) >= 90, state=ProductForm.add_name)
     async def add_product_name_invalid(message: types.Message):
         await message.reply(
-            f'Слишком длинное название.\nСократите название до 40 символов')
+            f'Слишком длинное название.\nСократите название до 90 символов')
 
     @dp.message_handler(state=ProductForm.add_name)
     async def add_product_name(message: types.Message, state: FSMContext):
@@ -1860,24 +1857,33 @@ async def show_admin_panel(callback_query: types.CallbackQuery, state=FSMContext
 
     @dp.message_handler(content_types=types.ContentType.PHOTO, state=ProductForm.add_photo)
     async def add_product_photo(message: types.Message, state: FSMContext):
-
         user_id = message.from_user.id
-
         data = await state.get_data()
         product_name = data['product_name']
         name_description = data['name_description']
         product_price = data['product_price']
         product_quantity = data['product_quantity']
         catalog_name = data['catalog_name']
-        image_id = await save_image(message.photo)
-        product_info = {
-            "_id": ObjectId(),
-            "product_name": product_name,
-            "name_description": name_description,
-            "product_price": product_price,
-            "quantity": product_quantity,
-            "image_id": image_id
-        }
+        image_ids = await save_image(message.photo)
+
+        if len(image_ids) > 0:
+            product_info = {
+                "_id": ObjectId(),
+                "product_name": product_name,
+                "name_description": name_description,
+                "product_price": product_price,
+                "quantity": product_quantity,
+                "image_ids": image_ids[0] if len(image_ids) == 1 else image_ids
+            }
+        else:
+            product_info = {
+                "_id": ObjectId(),
+                "product_name": product_name,
+                "name_description": name_description,
+                "product_price": product_price,
+                "quantity": product_quantity,
+                "image_ids": []
+            }
         keyboard = InlineKeyboardMarkup()
         success = await add_product_to_category(catalog_name, product_info)
         if success:
@@ -1916,7 +1922,7 @@ async def show_admin_panel(callback_query: types.CallbackQuery, state=FSMContext
         keyboard = InlineKeyboardMarkup()
         for category in categories:
             category_name = category['name']
-            keyboard.add(InlineKeyboardButton(category_name, callback_data=f"choosecategory_{category_name}"))
+            keyboard.add(InlineKeyboardButton(category_name, callback_data=f"choosecategory_{category['_id']}"))
         keyboard.add(InlineKeyboardButton("🔙 Передумали ?", callback_data='catalogsandproduct'))
         await state.update_data(action="deleteproduct")
         await DeleteProduct.select_category.set()
@@ -1929,7 +1935,6 @@ async def show_admin_panel(callback_query: types.CallbackQuery, state=FSMContext
     async def choose_category(callback_query: types.CallbackQuery, state: FSMContext):
         selected_category = callback_query.data.split('_')[1]
         products = await get_products_in_category(selected_category)
-
         if not products:
             keyboard = InlineKeyboardMarkup()
             keyboard.add(InlineKeyboardButton("🔁 Выберите другую ?", callback_data="deleteproduct_"))
@@ -1959,16 +1964,15 @@ async def show_admin_panel(callback_query: types.CallbackQuery, state=FSMContext
     async def confirm_delete_product(callback_query: types.CallbackQuery, state: FSMContext):
         state_data = await state.get_data()
         selected_category = state_data.get('selected_category')
-
         data_parts = callback_query.data.split("_")
-        product_id = data_parts[2]  # Извлекаем product_id из callback_data
+        product_id = data_parts[2]
         keyboard = InlineKeyboardMarkup()
         keyboard.add(
             InlineKeyboardButton("Да", callback_data=f"deleteproduct1_{selected_category}_{product_id}"),
             InlineKeyboardButton("Нет", callback_data="catalogsandproduct")
         )
         await bot.edit_message_text(
-            f"Вы уверены, что хотите удалить этот товар из каталога '{selected_category}'?",
+            f"Вы уверены, что хотите удалить этот товар из каталога ?",
             callback_query.from_user.id, callback_query.message.message_id,
             reply_markup=keyboard
         )

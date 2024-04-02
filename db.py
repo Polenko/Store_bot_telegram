@@ -149,10 +149,24 @@ async def remove_contact_from_db(contact_name):
     return result.deleted_count > 0
 
 
-async def save_image(photo):
-    file_id = photo[-1].file_id
-    image_id = fs.put(await bot.download_file_by_id(file_id))
-    return str(image_id)
+async def save_image(photos):
+    image_ids = []
+    print(image_ids, photos)
+    for photo in photos:
+        print(photo)
+        if photo:
+            try:
+                file_id = photo.file_id
+                file = await bot.download_file_by_id(file_id)
+                image_id = fs.put(file)
+                image_ids.append(image_id)
+            except (ValueError, KeyError) as e:
+                print(f"Ошибка при обработке фотографии: {photo}, {e}")
+                continue
+        else:
+            print("Пустой список фотографий")
+            continue
+    return image_ids
 
 
 async def remove_category_from_db(category_id):
@@ -160,7 +174,12 @@ async def remove_category_from_db(category_id):
     return result.deleted_count > 0
 
 
-async def get_photo_file_by_id(image_id):
+async def get_photo_file_by_id(image_ids):
+    if isinstance(image_ids, list):
+        image_id = image_ids[0]
+    else:
+        image_id = image_ids
+
     image = fs.get(ObjectId(image_id))
     if image:
         with open("temp_image.jpg", "wb") as temp_file:
