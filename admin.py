@@ -30,8 +30,6 @@ from states import ProductForm, NewCategory, UserForm, AddPerson, UpdateUserData
 
 user_carts = {}
 catalog_name_data = {}
-order_time = datetime(2023, 11, 14, 2, 43, 35, 493799)
-formatted_time = order_time.strftime("%Y-%m-%d %H:%M:%S")
 
 
 @dp.message_handler(commands=['start'])
@@ -89,9 +87,8 @@ async def get_menu_keyboard(user_id):
     menu_keyboard.add(catalog)
     menu_keyboard.add(cart)
     menu_keyboard.add(orders, profile)
-    menu_keyboard.add(InlineKeyboardButton(text="Панель управления 🤴", callback_data="admin_panel"))
-    # if user_id in admin_user_ids:
-    #     menu_keyboard.add(InlineKeyboardButton(text="Панель управления🤴", callback_data="admin_panel"))
+    if user_id in admin_user_ids:
+        menu_keyboard.add(InlineKeyboardButton(text="Панель управления🤴", callback_data="admin_panel"))
     menu_keyboard.add(help)
     return menu_keyboard
 
@@ -352,7 +349,6 @@ async def show_cart(callback_query: types.CallbackQuery):
         total_price += quantity * price
         items.append(f"♾️♾️♾️♾️♾️\n{product_name}\nКоличество ➖ {quantity} шт.\nПо цене ➖ {price} сом")
 
-
     text = f"Содержимое корзины:\n\n" + "\n".join(items) + f"\n\n♾️♾️♾️♾️♾️\nВсего на сумму: {total_price} сом"
 
     markup = InlineKeyboardMarkup()
@@ -603,7 +599,6 @@ async def send_order_to_admins(user_id, user_cart, total_price, delivery_type, o
     user_info = await get_user(user_id)
     user = await bot.get_chat(user_id)
     username = user.username
-    formatted_time = order_time.strftime("%Y-%m-%d %H:%M:%S")
     if not user_info:
         return
 
@@ -640,6 +635,7 @@ async def show_orders(callback_query: types.CallbackQuery):
     keyboard.add(InlineKeyboardButton('Главное меню', callback_data="show_menu"))
     count_products = 0
     count_price = 0
+    current_time = datetime.now()
     if not order_history:
         await callback_query.answer("Вы еще не делали заказов", show_alert=True)
         return
@@ -1778,7 +1774,6 @@ async def show_admin_panel(callback_query: types.CallbackQuery, state=FSMContext
                 callback_query.from_user.id, callback_query.message.message_id,
                 reply_markup=keyboard
             )
-
 
     @dp.callback_query_handler(lambda c: c.data.startswith('addproduct_'), state='*')
     async def add_product(callback_query: types.CallbackQuery):
